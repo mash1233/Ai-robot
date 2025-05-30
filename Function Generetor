@@ -1,0 +1,116 @@
+#include <PWM.h>              // PWM library for frequency control
+#include <LiquidCrystal.h>    // LCD library
+
+// LCD pin connections
+const int rs = 14, en = 15, d4 = 4, d5 = 3, d6 = 6, d7 = 7;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+// Rotary Encoder pins
+const int Encoder_OuputA  = 11;
+const int Encoder_OuputB  = 12;
+const int Encoder_Switch = 10;
+
+// Signal and Sine output pins
+const int signal_pin = 9;  
+const int Sine_pin = 5;
+
+// Frequency control
+int32_t frequency = 1000;          // Initial frequency (Hz)
+int32_t lower_level_freq = 1;      // Min frequency
+int32_t upper_level_freq = 100000; // Max frequency
+int multiplier = 1;
+
+// Encoder tracking
+int Previous_Output;
+
+// Sine wave generation
+double angle = 0;
+double increment = 0.1;
+
+// Setup
+void setup() {
+  // LCD setup
+  lcd.begin(16, 2);
+  lcd.print("Signal Generator");
+  lcd.setCursor(0, 1);
+  lcd.print("-CircuitDigest ");
+  delay(2000);
+  lcd.clear();
+  lcd.print("Freq:     Hz");
+  lcd.setCursor(0, 1);
+  lcd.print("Inc. by: ");
+  lcd.print(multiplier);
+
+  // Serial debug
+  Serial.begin(9600);
+
+  // Init PWM
+  InitTimersSafe();  
+  SetPinFrequencySafe(signal_pin, frequency);
+  pwmWriteHR(signal_pin, 32768);  // 50% duty cycle
+
+  // Encoder pins
+  pinMode(Encoder_OuputA, INPUT);
+  pinMode(Encoder_OuputB, INPUT);
+  pinMode(Encoder_Switch, INPUT_PULLUP); // Pullup for switch
+  Previous_Output = digitalRead(Encoder_OuputA);
+
+  // Optional: sine output (commented out to reduce interference during testing)
+  // attachInterrupt(digitalPinToInterrupt(2), generate_sine, CHANGE); // Only if Pin 2 is connected
+}
+
+// Main loop
+void loop() {
+  // Encoder rotation handling
+  int current_A = digitalRead(Encoder_OuputA);
+  if (current_A != Previous_Output) {
+    int current_B = digitalRead(Encoder_OuputB);
+    if (current_B != current_A) {
+      frequency += multiplier;
+    } else {
+      frequency -= multiplier;
+      if (frequency < lower_level_freq) frequency = lower_level_freq;
+    }
+
+    // Update PWM frequency
+    SetPinFrequencySafe(signal_pin, frequency);
+    pwmWriteHR(signal_pin, 32768);  // 50% duty
+
+    // Update LCD
+    lcd.setCursor(5, 0);
+    lcd.print("     ");  // Clear old value
+    lcd.setCursor(5, 0);
+    lcd.print(frequency);
+    Serial.print("Frequency: ");
+    Serial.println(frequency);
+
+    delay(5);  // Simple debounce
+  }
+
+  // Encoder switch press to change step
+  if (digitalRead(Encoder_Switch) == LOW) {
+    multiplier *= 10;
+    if (multiplier > 1000) multiplier = 1;
+
+    lcd.setCursor(0, 1);
+    lcd.print("Cng. by:     ");
+    lcd.setCursor(8, 1);
+    lcd.print("    ");
+    lcd.setCursor(8, 1);
+    lcd.print(multiplier);
+    delay(500);
+    while (digitalRead(Encoder_Switch) == LOW); // Wait for release
+  }
+
+  Previous_Output = current_A;
+}
+
+// Optional sine wave generator (attach via interrupt if needed)
+void generate_sine() {
+  double sineValue = sin(angle);
+  sineValue *= 127.5;
+  int plot = map(sineValue, -127, +127, 0, 255);
+  analogWrite(Sine_pin, plot);
+  angle += increment;
+  if (angle > 2 * PI) angle = 0;
+}
