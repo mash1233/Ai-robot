@@ -1,5 +1,5 @@
-#include <PWM.h>              // PWM library for frequency control
-#include <LiquidCrystal.h>    // LCD library
+#include <PWM.h>              
+#include <LiquidCrystal.h>    
 
 // LCD pin connections
 const int rs = 14, en = 15, d4 = 4, d5 = 3, d6 = 6, d7 = 7;
