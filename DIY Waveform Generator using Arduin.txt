@@ -1,0 +1,157 @@
+DIY Waveform Generator using Arduino​
+​
+Every Engineer who loves to tinker with electronics at some point of time would want to have their own lab set-up. A Multimeter, Clamp meter, Oscilloscope, LCR Meter, Function Generator, Dual mode power supply and an Auto transformer are the bare minimum equipments for a decent lab set-up. While all of these can be purchased, we can also easily built few on our own like the Function Generator and the Dual mode power supply.
+
+In this article we will learn how quickly and easily we can build our own Function generator using Arduino. This function generator a.k.a waveform generator can produce square wave (5V/0V) with frequency ranging from 1Hz to 2MHz, the frequency of the wave can be controlled by a knob and the duty cycle is hardcoded to 50% but it is easy to change that in the program as well. Apart from that, the generator can also produce since wave with frequency control. Do note that this generator is not of industrial grade and cannot be used for serious testing. But other than that it will come in handy for all hobby projects and you need not wait in weeks for the shipment to arrive. Also what’s more fun than using a device, that we built on our own.
+
+Materials Required
+Arduino Nano
+16*2 Alphanumeric LCD display
+Rotary Encoder
+Resistor(5.6K,10K)
+Capacitor (0.1uF)
+Perf board, Bergstik
+Soldering Kit
+Circuit Diagram
+The complete circuit diagram this Arduino Function Generator is shown below. As you can see we have an Arduino Nano which acts as the brain of our project and an 16x2 LCD to display the value of frequency that is currently being generated. We also have a rotary encoder which will help us to set the frequency.
+
+Circuit Diagram for DIY Waveform Generator using Arduino​
+
+The complete set-up is powered by the USB port of the Arduino itself. The connections which I used previously didn’t turn out to work dues to some reasons which we will discuss later in this article. Hence I had to mess up with the wiring a bit by changing the pin order. Anyhow, you will not have any such issues as it is all sorted out, just follow the circuit carefully to know which pin is connect to what. You can also refer the below table to verify your connections.
+
+Arduino Pin	Connected to
+D14	Connected to RS of LCD
+D15	Connected to RN of LCD
+D4	Connected to D4 of LCD
+D3	Connected to D5 of LCD
+D6	Connected to D6 of LCD
+D7	Connected to D7 of LCD
+D10	Connect to Rotary Encoder 2
+D11	Connect to Rotary Encoder 3
+D12	Connect to Rotary Encoder 4
+D9	Outputs square wave
+D2	Connect to D9 of Arduino
+D5	Outputs SPWM then converted to sine
+The circuit is pretty simple; we produce a square wave on pin D9 which can be used as such, the frequency of this square wave is controlled by the rotary encoder. Then to get a sine wave we produce SPWM signal on pin D5, the frequency of this has to be related with PWM frequency so we provide this PWM signal to pin D2 to act as an interrupt and then use the ISR to control the frequency of the since wave.
+
+You can build the circuit on a breadboard or even get a PCB for it. But I decided to solder it on a Perf board to get the work done fast and make it reliable for long term use. My board looks like this once all the connections are complete.
+
+Circuit Hardware for DIY Waveform Generator using Arduino​
+
+If you want to know more on how the PWM and Sine wave is produced with Arduino read the following paragraphs, else you can scroll down directly to the Programming Arduino section.
+
+Producing Square Wave with Variable Frequency
+People who are using Arduino might be familiar that Arduino can produce PWM signals simply by using the analog write function. But this function is limited only to control the duty cycle of the PWM signal and not the frequency of the signal. But for a waveform generator we need a PWM signal whose frequency can be controlled. This can be done by directly controlling the Timers of the Arduino and toggling a GPIO pin based on it. But there are some pre-built libraries which do just the same and can be used as such. The library that we are using is the Arduino PWM Frequency Library. We will discuss more about this library in the coding section.
+
+Producing Square Wave with Variable Frequency
+
+There are some drawbacks with this library as well, because the library alters the default Timer 1 and Timer 2 settings in Arduino. Hence you will no longer be able to use servo library or any other timer related library with your Arduino. Also the analog write function on pins 9,10,11 & 13 uses Timer 1 and Timer 2 hence you will not be able to produce SPWM on those pins.
+
+The advantage of this library is that it does not disturb the Timer 0 of your Arduino, which is more vital than Timer 1 and Timer 2. Because of this you are free to use the delay function and millis() function without any problem. Also the pins 5 and 6 are controlled by Timer 0 hence we won’t be having problem in using analog write or servo control operation on those pins. Initially it took some time for me to figure this out and that is why the wiring is messed up a bit.
+
+Here we have also built one Simple Square waveform generator, but to change the frequency of waveform you have to replace Resistor or capacitor, and it will hard to get the required frequency.
+
+Producing Sine Wave using Arduino
+As we know microcontrollers are Digital devices and they cannot produce Sine wave by mere coding. But there two popular ways of obtaining a sine wave from a microcontroller one is by utilizing a DAC and the other is by creating a SPWM. Unfortunately Arduino boards (except Due) does not come with a built-in DAC to produce sine wave, but you can always build your own DAC using the simple R2R method and then use it to produce a decent sine wave. But to reduce the hardware work I decided to use the later method of creating a SPWM signal and then converting it to Sine wave.
+
+What is a SPWM signal?
+
+The term SPWM stands for Sinusoidal Pulse Width Modulation. This signal is very much similar to the PWM, but for an SPWM signal the duty cycle is controlled in such a manner to obtain an average voltage similar to that of a sine wave. For example, with 100% duty cycle the average output voltage will be 5V and for 25% we will have 1.25V thus controlling the duty cycle we can get pre-defined variable average voltage which is nothing but a sine wave. This technique is commonly used in Inverters.
+
+Sinusoidal Pulse Width Modulation
+
+In the above image, the blue signal is the SPWM signal. Notice that the duty cycle of the wave is varied from 0% to 100% and then back to 0%. The graph is plotted for -1.0 to +1.0V but in our case, since we are using an Arduino the scale will be form 0V to 5V. We will learn how to produce SPWM with Arduino in the programming section below.
+
+Converting SPWM to Sine wave
+
+Converting a SPWM single to sine wave requires a H-bridge circuit which consists of minimum 4 power switches. We will not go much deeper into it since we are not using it here. These H-bridge circuits are commonly used in inverters. It utilizes two SPWM signals where one is phase shifted from the other and both the signals are applied to the power switches in the H-bridge to make diagonal opposing switches turn on and off and the same time. This way we can get a wave form that looks similar to sine wave but will practically not be closer to anything shown in the figure above (green wave). To get a pure since wave output we have to use a filter like the low-pass filter which comprises of an Inductor and Capacitor.
+
+Output Waveform of DIY Waveform Generator using Arduino
+
+However in our circuit, we will not be using the sine wave to power anything. I simply wanted to create from the generated SPWM signal so I went with a simple RC-Filter. You can also try a LC-Filter for better results but I chose RC for simplicity. The value of my resistor is 620 Ohms and the capacitor is 10uF. The above image shows the SPWM signal (Yellow) from the pin 5 and the sine wave (Blue) which was obtained after passing it through a RC-Filter.
+
+If you don’t want to vary the frequency, you can also generate sine wave by using this Simple Sine Wave Generator Circuit using Transistor.
+
+Adding the Arduino PWM Frequency Library
+The Arduino Frequency Library can be downloaded by clicking on the link below.
+
+Arduino PWM Frequency Library
+At the time of writing this article, the Arduino PWM Frequency Librarey V_05 is the latest one and it will get downloaded as a ZIP file. Extract the ZIP file ad you will get a folder called PWM. Then navigate to the Libraries folder of your Arduino IDE, for windows users it will be in your documents at this path C:\Users\User\Documents\Arduino\libraries. Paste the PWM folder into the libraries folder. Sometimes you might already have a PWM folder in there, in that case make sure you replace the old one with this new one.
+
+
+Programming Arduino for Waveform Generator
+As always the complete program for this project can be found at the bottom of this page. You can use the code as such, but make sure you have added the variable frequency library for Arduino IDE as discussed above else you will get compile time error. In this section let’s look in to the code to understand what is happening.
+
+Basically we want to produce a PWM signal with variable frequency on pin 9. This frequency should be set using the rotary encoder and the value should also be displayed in the 16*2 LCD. Once the PWM signal is created on pin 9 it will create an interrupt on pin 2 since we have shorted both the pins. Using this interrupt we can control the frequency of the SPWM signal which is generated on pin 5.
+
+As always we begin our program by including the required library. The liquid crystal library is in-built in Arduino and we just installed the PWM library.
+
+#include <PWM.h> //PWM librarey for controlling freq. of PWM signal
+#include <LiquidCrystal.h>
+Next we declare the global variable and also mention the pin names for the LCD, Rotary Encoder and signal pins. You can leave this undisturbed if you have followed the circuit diagram above.
+
+const int rs = 14, en = 15, d4 = 4, d5 = 3, d6 = 6, d7 = 7; //Mention the pin number for LCD connection
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+const int Encoder_OuputA  = 11;
+const int Encoder_OuputB  = 12;
+const int Encoder_Switch = 10;
+const int signal_pin = 9; 
+const int Sine_pin = 5;
+const int POT_pin = A2;       
+
+int Previous_Output;
+int multiplier = 1;
+double angle = 0;
+double increment = 0.2;
+int32_t frequency; //frequency to be set
+int32_t lower_level_freq = 1; //Lowest possible freq value is 1Hz
+int32_t upper_level_freq = 100000; //Maximum possible freq is 100KHz
+Inside the setup function we initialize the LCD and serial communication for debugging purpose and then declare the pins of Encoder as input pins. We also display an intro message during the boot just to make sure things are working.
+
+  lcd.begin(16, 2); //Initialise 16*2 LCD
+
+  lcd.print("Signal Generator"); //Intro Message line 1
+  lcd.setCursor(0, 1);
+  lcd.print("-CircuitDigest "); //Intro Message line 2
+  delay(2000);
+  lcd.clear();
+  lcd.print("Freq:00000Hz");
+  lcd.setCursor(0, 1);
+  lcd.print("Inc. by: 1 ");
+
+Serial.begin(9600); //Serial for debugging
+
+//pin Mode declaration
+  pinMode (Encoder_OuputA, INPUT);
+  pinMode (Encoder_OuputB, INPUT);
+  pinMode (Encoder_Switch, INPUT);
+Another important line is the InitTimerSafe which initializes the timer 1 and 2 for producing a variable frequency PWM. Once this function is called the default timer settings of Arduino will be altered.
+
+InitTimersSafe(); //Initialize timers without disturbing timer 0
+We also have the external interrupt running on pin 2. So whenever there a change in status of pin 2 an interrupt will be triggered which will run the Interrupt service routine (ISR) function. Here the name of the ISR function is generate_sine.
+
+attachInterrupt(0,generate_sine,CHANGE);
+Next, inside the void loop we have to check if the rotary encoder has been turned. Only if it has been turned we need to adjust the frequency of the PWM signal. We have already learnt how to interface Rotary Encoder with Arduino. If you are new here I would recommend you to fall back to that tutorial and then get back here.
+
+If the rotary encoder is turned clockwise we increase the value of frequency by adding it with the value of multiplier. This way we can increase/decrease the value of frequency by 1, 10, 100 or even 1000. The value of multiplier can be set by pressing the rotary encoder. If the encoder is rotated we alter the value of frequency and produce a PWM signal on pin 9 with the following lines. Here the value 32768 sets the PWM to 50% cycle. The value 32768 is chosen, since 50% of 65536 is 32768 similarly you can determine the value for your required duty cycles. But here the duty cycle is fixed to 50%. Finally the function SetPinFrequencySafe is used to set the frequency of our signal pin that is pin 9.
+
+pwmWriteHR(signal_pin, 32768); //Set duty cycle to 50% by default -> for 16-bit 65536/2 = 32768
+SetPinFrequencySafe(signal_pin, frequency);
+Inside the ISR function we write the code to generate SPWM signal. There are many ways to generate SPWM signals and even pre-built libraries are available for Arduino. I have used the simplest of all methods of utilizing the sin() function in Arduino. You can also try with the lookup table method if you are interested. The sin() returns a variable value (decimal) between -1 to +1 and this when plotted against time will give us a sine wave.
+
+Now all we have to do is convert this value of -1 to +1 into 0 to 255 and feed it to our analog Write function. For which I have multiplied it with 255 just to ignore the decimal point and then used the map function to convert the value from -255 to +255 into 0 to +255. Finally this value is written to pin 5 using the analog write function. The value of angle is incremented by 0.2 every time the ISR is called this help us in controlling the frequency of the sine wave
+
+   double sineValue = sin(angle);
+   sineValue *= 255;
+   int plot = map(sineValue, -255, +255, 0, 255);
+   Serial.println(plot);
+   analogWrite(Sine_pin,plot);
+   angle += increment;
+Testing the Arduino Function Generator on Hardware
+Build your hardware as per the circuit diagram and upload the code given at the bottom of this page. Now, you are all set to test your project. It would be a lot easier if you have a DSO (Oscilloscope) but you can also test it with an LED since the frequency range is very high.
+
+Testing DIY Waveform Generator using Arduino​
+
+Connect the probe to the Square wave and sine wave pin of the circuit. Use two LEDs on these two pins if you do not have a scope. Power up the circuit and you should be greeted with the introductory message on the LCD. Then vary the Rotary encoder and set the required frequency you should be able to observe the square wave and sine wave on your scope as shown below. If you are using an LED you should notice the LED blinking at different intervals based on the frequency you have set.
+
